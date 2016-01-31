@@ -61,9 +61,12 @@ class DataManager:
             raise NameError("No hit at all.")
         return hits.pop()
        
-    def get_weather_data(station_id):
-        pass
-
+    def get_weather_data(self, station_id):
+        if not self.ftp:
+            self._connect_to_ftp()
+        self.ftp.cwd(self.filepath)
+        station_names = []
+        self.ftp.dir()
 
 def main(*args):
     dm = DataManager()
