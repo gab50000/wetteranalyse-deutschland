@@ -5,9 +5,9 @@ import numpy as np
 #  import matplotlib.pylab as plt
 from ftplib import FTP
 import zipfile
-from io import StringIO # um nichts auf die Festplatte zu schreiben, benutzen wir StringIO, mit dem wir ein file-artiges Objekt bekommen, das alles als String speichert.
-import pdb
-import sys
+from io import StringIO
+import ipdb
+import sys, os
 import re
 
 
@@ -30,7 +30,7 @@ class DataManager:
         if not self.ftp:
             self._connect_to_ftp()
         self.ftp.cwd(self.filepath)
-        with open(fname, "w") as f:
+        with open(fname, "bw") as f:
             self.ftp.retrbinary("RETR "+fname, f.write)
          
     def get_file(self, fname):
@@ -42,7 +42,10 @@ class DataManager:
             print("File {} for station code not found".format(fname))
             print("Trying to download")
             self._download(fname)
-            self.get_file(fname)
+            return self.get_file(fname)
+            
+    def get_zipfile(self, fname):
+        pass
         
     def test(self):
         for line in self.lookup:
@@ -62,17 +65,34 @@ class DataManager:
         return hits.pop()
        
     def get_weather_data(self, station_id):
-        if not self.ftp:
-            self._connect_to_ftp()
-        self.ftp.cwd(self.filepath)
-        station_names = []
-        self.ftp.dir()
+        # Check first if file has already been downloaded
+        for f in os.listdir("."):
+            if re.search("tageswerte", f) and station_id in re.findall("tageswerte_0*(\d+)", f)[0]:
+                print("Found matching file:")
+                print(f)
+                fname = f
+        else:
+            if not self.ftp:
+                self._connect_to_ftp()
+            self.ftp.cwd(self.filepath)
+            station_names = []
+            self.ftp.dir(station_names.append)
+            print("Looking for", station_id)
+            for line in station_names:
+                if re.search("tageswerte", line):
+                    if station_id == re.findall("tageswerte_0*(\d+)", line)[0]:
+                        print("Found matching file:")
+                        print(line)
+                        fname = line.split()[-1]
+                        self.get_file(fname)
+        return self.get_zipfile(fname)
+                        
 
 def main(*args):
     dm = DataManager()
     num, name = dm.get_station_number("kröllwitz")
-    pdb.set_trace()
- 
+    x = dm.get_weather_data(num)
+    ipdb.set_trace()
 
 if __name__ == "__main__":
     main()
