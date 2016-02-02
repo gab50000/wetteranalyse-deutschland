@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 import numpy as np
-#  import pandas as pd
-#  import matplotlib.pylab as plt
+import pandas as pd
+import matplotlib.pylab as plt
 from ftplib import FTP
 import zipfile
 from io import StringIO
@@ -45,8 +45,20 @@ class DataManager:
             return self.get_file(fname)
             
     def get_zipfile(self, fname):
-        pass
-        
+        try:
+            zf = zipfile.ZipFile(fname)
+            for n in zf.namelist():
+                if re.search("produkt_klima_Tageswerte", n):
+                    print("Found", n)
+                    with zf.open(n, "r") as f:
+                        data = pd.read_csv(f, sep=b"\s*;\s*")
+                    return data
+        except IOError:
+            print("file not found")
+            print("Trying to download")
+            self._download(fname)
+            return self.get_zipfile(fname)
+                   
     def test(self):
         for line in self.lookup:
             print(line)
