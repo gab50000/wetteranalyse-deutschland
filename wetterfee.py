@@ -15,6 +15,26 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
+def complete_filename(f):
+    @wraps(f)
+    def f_new(self, filename):
+        try:
+            result = f(self, filename)
+        except ftplib.error_perm:
+            logger.debug(f"Did not find {filename}")
+            list_of_files = self.ls()
+            # filter files which start with filename and are not directories
+            possible_files = [f.split()[-1] for f in list_of_files
+                              if f.split()[-1].startswith(filename) and f[0] != "d"]
+            if len(possible_files) == 1:
+                filename = possible_files[0]
+                result = f(self, filename)
+            else:
+                raise ValueError("File not found")
+        return result
+    return f_new
+
+
 class FTPBrowser:
     def __init__(self, address):
         self.address = address
