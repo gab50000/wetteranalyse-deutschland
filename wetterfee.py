@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+from functools import wraps
 import logging
 import os
+import pathlib
 import re
 import zipfile
 import ftplib
@@ -47,28 +49,18 @@ class FTPBrowser:
         logger.debug("Terminate FTP connection")
         self.ftp.close()
 
-    def ls(self):
+    def ls(self, dir_=""):
         result = []
-        self.ftp.retrlines("LIST", result.append)
+        self.ftp.retrlines(f"LIST {dir_}", result.append)
         return result
 
     def cd(self, dir_):
         self.ftp.cwd(dir_)
         return self
 
+    @complete_filename
     def cat(self, filename):
-        try:
-            result = self._retrlines(f"RETR {filename}")
-        except ftplib.error_perm:
-            logger.debug(f"Did not find {filename}")
-            list_of_files = self.ls()
-            possible_files = [f.split()[-1] for f in list_of_files
-                              if f.split()[-1].startswith(filename)]
-            if len(possible_files) == 1:
-                filename = possible_files[0]
-                result = self.cat(filename)
-            else:
-                raise ValueError("File not found")
+        result = self._retrlines(f"RETR {filename}")
         return result
 
     def _retrlines(self, command):
@@ -77,27 +69,33 @@ class FTPBrowser:
         self.ftp.retrlines(command, result.append)
         return result
 
+    @complete_filename
+    def download(self, filename):
+        with open(filename, "bw") as f:
+            self.ftp.retrbinary(f"RETR {filename}", f.write)
+
 
 class DataManager:
+    """Manage data access to the FTP server of Deutscher Wetterdienst"""
 
     server_adress = "ftp-cdc.dwd.de"
-    filepath = "/pub/CDC/observations_germany/climate/daily/kl/historical/"
+    filepath = pathlib.Path("/pub/CDC/")
     # hier stehen die Wetterstationen drin
     description_file = "KL_Tageswerte_Beschreibung_Stationen.txt"
-    def __init__(self):
-        self.ftp = None
-        self.lookup = self.get_file(self.description_file)
 
-    def _connect_to_ftp(self):
-        self.ftp = FTP(self.server_adress)
-        self.ftp.login()
+    def __init__(self, observations="germany", frequency="daily", when="historical"):
+        if observations not in ("germany", "global"):
+            raise ValueError("Choose between germany, global")
 
-    def _download(self, fname):
-        if not self.ftp:
-            self._connect_to_ftp()
-        self.ftp.cwd(self.filepath)
-        with open(fname, "bw") as f:
-            self.ftp.retrbinary("RETR "+fname, f.write)
+        if observations == "germany":
+            self.filepath = (self.filepath / f"observations_{observations}" /
+                             "climate" / frequency)
+        else:
+            self.filepath = (self.filepath / f"observations_{observations}" /
+                             "CLIMAT" / "monthly" / "qc")
+
+        self.browser = FTPBrowser(self.server_adress)
+        self.browser.cd(str(self.filepath))
 
     def get_file(self, fname):
         try:
@@ -107,7 +105,7 @@ class DataManager:
         except IOError:
             print("File {} for station code not found".format(fname))
             print("Trying to download")
-            self._download(fname)
+            self.browser.download(fname)
             return self.get_file(fname)
 
     def get_zipfile(self, fname):
@@ -123,7 +121,7 @@ class DataManager:
         except IOError:
             print("file not found")
             print("Trying to download")
-            self._download(fname)
+            self.browser.download(fname)
             return self.get_zipfile(fname)
 
     def test(self):
@@ -146,11 +144,7 @@ class DataManager:
                 print(f)
                 fname = f
         else:
-            if not self.ftp:
-                self._connect_to_ftp()
-            self.ftp.cwd(self.filepath)
-            station_names = []
-            self.ftp.dir(station_names.append)
+            station_names = self.browser.ls()
             print("Looking for", station_id)
             for line in station_names:
                 if re.search("tageswerte", line):
@@ -164,4 +158,4 @@ class DataManager:
 
 
 def main():
-    fire.Fire(FTPBrowser)
+    fire.Fire()
