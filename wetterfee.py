@@ -71,7 +71,7 @@ class DataManager:
         station_id = str(station_id)
         # Check first if file has already been downloaded
         for f in os.listdir(os.curdir):
-            if re.search("tageswerte", f) and station_id in re.findall("tageswerte_0*(\d+)", f)[0]:
+            if re.search("tageswerte", f) and station_id in re.findall(r"tageswerte_0*(\d+)", f)[0]:
                 print("Found matching file:")
                 print(f)
                 fname = f
@@ -84,7 +84,7 @@ class DataManager:
             print("Looking for", station_id)
             for line in station_names:
                 if re.search("tageswerte", line):
-                    match = re.findall("tageswerte_0*(\d+)", line)
+                    match = re.findall(r"tageswerte_0*(\d+)", line)
                     if match and station_id == match[0]:
                         print("Found matching file:")
                         print(line)
