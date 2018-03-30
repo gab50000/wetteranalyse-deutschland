@@ -10,6 +10,7 @@ import ftplib
 from ftplib import FTP
 
 import fire
+import ftputil
 import pandas as pd
 
 
@@ -41,18 +42,25 @@ class FTPBrowser:
     def __init__(self, address):
         self.address = address
         logger.info("Connecting to %s", self.address)
-        self.ftp = FTP(self.address)
-        self.ftp.login()
-        logger.info(self.ftp.getwelcome())
+        self.ftp = ftputil.FTPHost(self.address, "anonymous", "")
 
     def __del__(self):
         logger.debug("Terminate FTP connection")
         self.ftp.close()
 
     def ls(self, dir_=""):
+        return self.ftp.listdir(".")
+
+    def find(self, dir_=".", *, show_files=True, show_dirs=True):
         result = []
-        self.ftp.retrlines(f"LIST {dir_}", result.append)
-        return result
+        for root, dirs, files in self.ftp.walk(dir_):
+            if show_files:
+                for f in files:
+                    result.append(os.path.join(root, f))
+            if show_dirs:
+                for d in dirs:
+                    result.append(os.path.join(root, d))
+        return "\n".join(result)
 
     def cd(self, dir_):
         self.ftp.cwd(dir_)
