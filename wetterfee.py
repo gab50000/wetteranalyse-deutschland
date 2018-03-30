@@ -28,18 +28,33 @@ class FTPBrowser:
         self.ftp.close()
 
     def ls(self):
-        return self.ftp.retrlines("LIST")
+        result = []
+        self.ftp.retrlines("LIST", result.append)
+        return result
 
     def cd(self, dir_):
         self.ftp.cwd(dir_)
         return self
 
-    def cat(self, file):
-        return self._retrlines(f"RETR {file}")
+    def cat(self, filename):
+        try:
+            result = self._retrlines(f"RETR {filename}")
+        except ftplib.error_perm:
+            logger.debug(f"Did not find {filename}")
+            list_of_files = self.ls()
+            possible_files = [f.split()[-1] for f in list_of_files
+                              if f.split()[-1].startswith(filename)]
+            if len(possible_files) == 1:
+                filename = possible_files[0]
+                result = self.cat(filename)
+            else:
+                raise ValueError("File not found")
+        return result
 
     def _retrlines(self, command):
+        result = []
         logger.debug("Executing %s", command)
-        result = self.ftp.retrlines(command)
+        self.ftp.retrlines(command, result.append)
         return result
 
 
