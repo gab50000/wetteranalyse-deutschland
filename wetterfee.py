@@ -5,6 +5,7 @@ import re
 import zipfile
 from ftplib import FTP
 
+import fire
 import pandas as pd
 
 
@@ -91,3 +92,7 @@ class DataManager:
                         fname = line.split()[-1]
                         self.get_file(fname)
         return self.get_zipfile(fname)
+
+
+def main():
+    fire.Fire(FTPBrowser)
