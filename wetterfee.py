@@ -1,12 +1,46 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
+import logging
 import os
 import re
 import zipfile
+import ftplib
 from ftplib import FTP
 
 import fire
 import pandas as pd
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+
+class FTPBrowser:
+    def __init__(self, address):
+        self.address = address
+        logger.info("Connecting to %s", self.address)
+        self.ftp = FTP(self.address)
+        self.ftp.login()
+        logger.info(self.ftp.getwelcome())
+
+    def __del__(self):
+        logger.debug("Terminate FTP connection")
+        self.ftp.close()
+
+    def ls(self):
+        return self.ftp.retrlines("LIST")
+
+    def cd(self, dir_):
+        self.ftp.cwd(dir_)
+        return self
+
+    def cat(self, file):
+        return self._retrlines(f"RETR {file}")
+
+    def _retrlines(self, command):
+        logger.debug("Executing %s", command)
+        result = self.ftp.retrlines(command)
+        return result
 
 
 class DataManager:
