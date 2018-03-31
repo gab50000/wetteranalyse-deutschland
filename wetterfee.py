@@ -96,19 +96,15 @@ class DataManager:
     # hier stehen die Wetterstationen drin
     description_file = "KL_Tageswerte_Beschreibung_Stationen.txt"
 
-    def __init__(self, observations="germany", frequency="daily", when="historical"):
-        if observations not in ("germany", "global"):
-            raise ValueError("Choose between germany, global")
-
-        if observations == "germany":
-            self.filepath = (self.filepath / f"observations_{observations}" /
+    def __init__(self, frequency="daily", when="historical"):
+        self.filepath = (self.filepath / f"observations_germany" /
                              "climate" / frequency)
-        else:
-            self.filepath = (self.filepath / f"observations_{observations}" /
-                             "CLIMAT" / "monthly" / "qc")
 
         self.browser = FTPBrowser(self.server_adress)
         self.browser.cd(str(self.filepath))
+
+        if frequency == "daily":
+            self.description_filepath = ""
 
     def get_file(self, fname):
         try:
