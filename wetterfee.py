@@ -60,10 +60,12 @@ class FTPBrowser:
             if show_files:
                 for f in files:
                     if name is None or search(name, f):
+                        logger.info("Found file %s", f)
                         result.append(os.path.join(root, f))
             if show_dirs:
                 for d in dirs:
                     if name is None or search(name, d):
+                        logger.info("Found directory %s", d)
                         result.append(os.path.join(root, d))
         return "\n".join(result)
 
