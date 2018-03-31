@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from functools import wraps
+from functools import wraps, partial
 import logging
 import os
 import pathlib
@@ -17,6 +17,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
+
+search = partial(re.search, flags=re.IGNORECASE)
 
 def complete_filename(f):
     @wraps(f)
@@ -51,15 +53,18 @@ class FTPBrowser:
     def ls(self, dir_=""):
         return self.ftp.listdir(".")
 
-    def find(self, dir_=".", *, show_files=True, show_dirs=True):
+    def find(self, dir_=".", *, show_files=True, show_dirs=True, name=None):
         result = []
         for root, dirs, files in self.ftp.walk(dir_):
+            logger.debug("Go to root %s", root)
             if show_files:
                 for f in files:
-                    result.append(os.path.join(root, f))
+                    if name is None or search(name, f):
+                        result.append(os.path.join(root, f))
             if show_dirs:
                 for d in dirs:
-                    result.append(os.path.join(root, d))
+                    if name is None or search(name, d):
+                        result.append(os.path.join(root, d))
         return "\n".join(result)
 
     def cd(self, dir_):
