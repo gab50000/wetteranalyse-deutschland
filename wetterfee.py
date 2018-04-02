@@ -98,7 +98,7 @@ class DataManager:
         self.browser = FTPBrowser(self.server_adress)
         #self.browser.cd(str(self.filepath))
         self.lookup = self.browser.cat(str(self.description_file),
-                                       encoding="ISO-8859-1")
+                                       encoding="ISO-8859-1").splitlines()
 
     def get_file(self, fname):
         try:
@@ -138,7 +138,7 @@ class DataManager:
                 hits.append((line.split()[0], line.split()[6]))
         return hits
 
-    def get_weather_data(self, station_id):
+    def get_weather_data_daily(self, station_id):
         station_id = str(station_id)
         # Check first if file has already been downloaded
         for f in os.listdir(os.curdir):
