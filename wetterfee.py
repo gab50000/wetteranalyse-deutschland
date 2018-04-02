@@ -22,10 +22,10 @@ search = partial(re.search, flags=re.IGNORECASE)
 
 def complete_filename(f):
     @wraps(f)
-    def f_new(self, filename):
+    def f_new(self, filename, *args, **kwargs):
         try:
-            result = f(self, filename)
-        except ftplib.error_perm:
+            result = f(self, filename, *args, **kwargs)
+        except ftputil.error.FTPIOError:
             logger.debug(f"Did not find {filename}")
             list_of_files = self.ls()
             # filter files which start with filename and are not directories
@@ -51,7 +51,7 @@ class FTPBrowser:
         self.ftp.close()
 
     def ls(self, dir_=""):
-        return self.ftp.listdir(".")
+        return self.ftp.listdir(dir_)
 
     def find(self, dir_=".", *, show_files=True, show_dirs=True, name=None):
         result = []
@@ -70,43 +70,35 @@ class FTPBrowser:
         return "\n".join(result)
 
     def cd(self, dir_):
-        self.ftp.cwd(dir_)
+        self.ftp.chdir(dir_)
         return self
 
     @complete_filename
-    def cat(self, filename):
-        result = self._retrlines(f"RETR {filename}")
-        return result
-
-    def _retrlines(self, command):
-        result = []
-        logger.debug("Executing %s", command)
-        self.ftp.retrlines(command, result.append)
+    def cat(self, filename, encoding="utf-8"):
+        logger.debug("Reading file %s", filename)
+        logger.debug("Use encoding %s", encoding)
+        with self.ftp.open(filename, "r", encoding=encoding) as f:
+            result = f.read()
         return result
 
     @complete_filename
     def download(self, filename):
-        with open(filename, "bw") as f:
-            self.ftp.retrbinary(f"RETR {filename}", f.write)
+        self.ftp.download(filename, filename)
 
 
 class DataManager:
     """Manage data access to the FTP server of Deutscher Wetterdienst"""
 
     server_adress = "ftp-cdc.dwd.de"
-    filepath = pathlib.Path("/pub/CDC/")
+    filepath = pathlib.Path("/pub/CDC/observations_germany/climate/daily/kl")
     # hier stehen die Wetterstationen drin
-    description_file = "KL_Tageswerte_Beschreibung_Stationen.txt"
+    description_file = filepath / "KL_Tageswerte_Beschreibung_Stationen.txt"
 
-    def __init__(self, frequency="daily", when="historical"):
-        self.filepath = (self.filepath / f"observations_germany" /
-                             "climate" / frequency)
-
+    def __init__(self):
         self.browser = FTPBrowser(self.server_adress)
-        self.browser.cd(str(self.filepath))
-
-        if frequency == "daily":
-            self.description_filepath = ""
+        #self.browser.cd(str(self.filepath))
+        self.lookup = self.browser.cat(str(self.description_file),
+                                       encoding="ISO-8859-1")
 
     def get_file(self, fname):
         try:
@@ -142,7 +134,7 @@ class DataManager:
     def get_station_numbers(self, city_name):
         hits = []
         for line in self.lookup:
-            if re.search(city_name, line, flags=re.I):
+            if search(city_name, line):
                 hits.append((line.split()[0], line.split()[6]))
         return hits
 
