@@ -90,7 +90,7 @@ class DataManager:
     """Manage data access to the FTP server of Deutscher Wetterdienst"""
 
     server_adress = "ftp-cdc.dwd.de"
-    filepath = pathlib.Path("/pub/CDC/observations_germany/climate/daily/kl")
+    filepath = pathlib.Path("/pub/CDC/observations_germany/climate/daily/kl/historical")
     # hier stehen die Wetterstationen drin
     description_file = filepath / "KL_Tageswerte_Beschreibung_Stationen.txt"
 
